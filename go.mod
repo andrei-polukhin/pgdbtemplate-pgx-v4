@@ -3,7 +3,7 @@ module github.com/andrei-polukhin/pgdbtemplate-pgx-v4
 go 1.20
 
 require (
-	github.com/andrei-polukhin/pgdbtemplate v1.0.1
+	github.com/andrei-polukhin/pgdbtemplate v1.0.2
 	github.com/frankban/quicktest v1.14.6
 	github.com/jackc/pgx/v4 v4.16.1
 )
