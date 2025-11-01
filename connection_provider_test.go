@@ -8,6 +8,7 @@ import (
 	"time"
 
 	qt "github.com/frankban/quicktest"
+	"github.com/jackc/pgx/v4"
 	"github.com/jackc/pgx/v4/pgxpool"
 
 	"github.com/andrei-polukhin/pgdbtemplate"
@@ -269,6 +270,10 @@ func TestPgxConnectionProvider(t *testing.T) {
 			pgdbtemplatepgx.WithMinConns(2),
 			pgdbtemplatepgx.WithMaxConnLifetime(2*time.Hour),
 			pgdbtemplatepgx.WithMaxConnIdleTime(45*time.Minute),
+			pgdbtemplatepgx.WithAfterConnect(func(ctx context.Context, conn *pgx.Conn) error {
+				_, err := conn.Query(ctx, "SELECT 'Postgres is cool!'")
+				return err
+			}),
 		)
 		defer provider.Close()
 

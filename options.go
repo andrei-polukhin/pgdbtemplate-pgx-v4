@@ -1,8 +1,10 @@
 package pgdbtemplatepgxv4
 
 import (
+	"context"
 	"time"
 
+	"github.com/jackc/pgx/v4"
 	"github.com/jackc/pgx/v4/pgxpool"
 )
 
@@ -41,5 +43,13 @@ func WithMaxConnLifetime(d time.Duration) ConnectionOption {
 func WithMaxConnIdleTime(d time.Duration) ConnectionOption {
 	return func(p *ConnectionProvider) {
 		p.poolConfig.MaxConnIdleTime = d
+	}
+}
+
+// WithAfterConnect sets a function to be called
+// after a new connection is established.
+func WithAfterConnect(afterConnect func(context.Context, *pgx.Conn) error) ConnectionOption {
+	return func(p *ConnectionProvider) {
+		p.poolConfig.AfterConnect = afterConnect
 	}
 }
