@@ -75,6 +75,7 @@ func (p *ConnectionProvider) Connect(ctx context.Context, databaseName string) (
 	config.MinConns = p.poolConfig.MinConns
 	config.MaxConnLifetime = p.poolConfig.MaxConnLifetime
 	config.MaxConnIdleTime = p.poolConfig.MaxConnIdleTime
+	config.AfterConnect = p.poolConfig.AfterConnect
 
 	pool, err := pgxpool.ConnectConfig(ctx, config)
 	if err != nil {
