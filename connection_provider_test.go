@@ -271,8 +271,12 @@ func TestPgxConnectionProvider(t *testing.T) {
 			pgdbtemplatepgx.WithMaxConnLifetime(2*time.Hour),
 			pgdbtemplatepgx.WithMaxConnIdleTime(45*time.Minute),
 			pgdbtemplatepgx.WithAfterConnect(func(ctx context.Context, conn *pgx.Conn) error {
-				_, err := conn.Query(ctx, "SELECT 'Postgres is cool!'")
-				return err
+				rows, err := conn.Query(ctx, "SELECT 'Postgres is cool!'")
+				if err != nil {
+					return err
+				}
+				rows.Close() // Must close rows to release the connection.
+				return nil
 			}),
 		)
 		defer provider.Close()
