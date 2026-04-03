@@ -63,19 +63,9 @@ func (p *ConnectionProvider) Connect(ctx context.Context, databaseName string) (
 		return nil, fmt.Errorf("failed to parse connection string: %w", err)
 	}
 
-	// Apply pool configuration settings if provided.
-	// MaxConns must be checked (pgx v4 validates >= 1).
-	if p.poolConfig.MaxConns != 0 {
-		if p.poolConfig.MaxConns < 1 {
-			return nil, fmt.Errorf("MaxConns must be >= 1, got %d", p.poolConfig.MaxConns)
-		}
-		config.MaxConns = p.poolConfig.MaxConns
+	if err := p.applyPoolConfig(config); err != nil {
+		return nil, fmt.Errorf("failed to apply pool config: %w", err)
 	}
-	// These could be set directly (0 is safe).
-	config.MinConns = p.poolConfig.MinConns
-	config.MaxConnLifetime = p.poolConfig.MaxConnLifetime
-	config.MaxConnIdleTime = p.poolConfig.MaxConnIdleTime
-	config.AfterConnect = p.poolConfig.AfterConnect
 
 	pool, err := pgxpool.ConnectConfig(ctx, config)
 	if err != nil {
@@ -94,6 +84,50 @@ func (p *ConnectionProvider) Connect(ctx context.Context, databaseName string) (
 		provider: p,
 		dbName:   databaseName,
 	}, nil
+}
+
+// applyPoolConfig merges user-provided pool options into a parsed config,
+// preserving pgx defaults for fields where zero has special meaning.
+//
+// ConnConfig is intentionally not copied from p.poolConfig to preserve
+// Connect(databaseName) behavior that derives the target database from the
+// parsed connection string for each call.
+func (p *ConnectionProvider) applyPoolConfig(config *pgxpool.Config) error {
+	if p.poolConfig.HealthCheckPeriod != 0 {
+		config.HealthCheckPeriod = p.poolConfig.HealthCheckPeriod
+	}
+	if p.poolConfig.MaxConns != 0 {
+		if p.poolConfig.MaxConns < 1 {
+			// Prevent pgx/puddle panic for invalid max pool size.
+			return fmt.Errorf("MaxConns must be >= 1, got %d", p.poolConfig.MaxConns)
+		}
+		config.MaxConns = p.poolConfig.MaxConns
+	}
+
+	// MinConns: 0 is a valid value (no minimum), assign unconditionally.
+	config.MinConns = p.poolConfig.MinConns
+	if p.poolConfig.MaxConnLifetime != 0 {
+		config.MaxConnLifetime = p.poolConfig.MaxConnLifetime
+	}
+	if p.poolConfig.MaxConnIdleTime != 0 {
+		config.MaxConnIdleTime = p.poolConfig.MaxConnIdleTime
+	}
+	if p.poolConfig.BeforeConnect != nil {
+		config.BeforeConnect = p.poolConfig.BeforeConnect
+	}
+	if p.poolConfig.AfterConnect != nil {
+		config.AfterConnect = p.poolConfig.AfterConnect
+	}
+	if p.poolConfig.BeforeAcquire != nil {
+		config.BeforeAcquire = p.poolConfig.BeforeAcquire
+	}
+	if p.poolConfig.AfterRelease != nil {
+		config.AfterRelease = p.poolConfig.AfterRelease
+	}
+	// LazyConnect: bool, false is both zero-value and the pgx default; assign unconditionally.
+	config.LazyConnect = p.poolConfig.LazyConnect
+
+	return nil
 }
 
 // GetNoRowsSentinel implements pgdbtemplate.ConnectionProvider.GetNoRowsSentinel.
